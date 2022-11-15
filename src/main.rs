@@ -13,27 +13,48 @@ use regex::Regex;
 use text_io::read;
 use urlencoding::encode;
 
-use crate::xpath::{google_form, siken_dot_com};
+use xpath::{google_form, siken_dot_com};
 
-// Crowling mode
-static HEADLESS: bool = false;
+static HEADLESS: OnceCell<bool> = OnceCell::new();
 static TAB: OnceCell<Arc<headless_chrome::Tab>> = OnceCell::new();
 
 #[allow(unused_must_use)]
 fn main() {
-    println!("Pleaase type url here ↓");
-
-    // Google form url
-    let form_url: String = read!("{}\n"); // test_url https://docs.google.com/forms/d/e/1FAIpQLScRkNwFH-sXyyPK-pYyP8pfCpXo5-I1JyNzB0wo1F_9RXUoJQ/viewform
+    // Crowling mode
+    print!("\nDo you use the 'Headless Mode'? [Y/n] ");
+    let input: String = read!();
+    let option = input.trim().to_uppercase();
+    let mut headless = false;
+    match &*option {
+        "Y" => {
+            headless = true;
+        }
+        "N" => {
+            headless = false;
+        }
+        _ => {
+            println!("Pleaase type 'Y' or 'n' here again.\n You've typed an option that is not in the options.");
+        }
+    }
+    HEADLESS.set(headless);
 
     // Student infomation
-    let class_id = String::from("IH14A219");
-    let id = String::from("90000");
-    let name = String::from("null po");
+    println!("\n-- Please type your student information. --");
+    print!("    Class ID: ");
+    let class_id: String = read!("{}\n");
+    print!("    Student ID: ");
+    let id: String = read!("{}\n");
+    print!("    Your Name: ");
+    let name: String = read!("{}\n");
+
+    // Google form url
+    println!("\n-- Pleaase type a form url here ↓ --");
+    print!("    Form URL: ");
+    let form_url: String = read!("{}\n"); // test_url https://docs.google.com/forms/d/e/1FAIpQLScRkNwFH-sXyyPK-pYyP8pfCpXo5-I1JyNzB0wo1F_9RXUoJQ/viewform
 
     // setup headless chrome
     let option = LaunchOptions {
-        headless: HEADLESS,
+        headless: *HEADLESS.get().unwrap(),
         idle_browser_timeout: time::Duration::from_secs(200),
         ..Default::default()
     };
@@ -65,7 +86,7 @@ fn main() {
 
 #[allow(unused_must_use)]
 fn submit() {
-    if HEADLESS {
+    if *HEADLESS.get().unwrap() {
         loop {
             print!("\nDo you want to submit? [Y/n] ");
             let input: String = read!("{}\n");
@@ -135,7 +156,7 @@ fn type_answers() -> Vec<String> {
 #[allow(unused_must_use)]
 fn click_element(xpath: String) {
     let element = TAB.get().unwrap().find_element_by_xpath(&xpath).unwrap();
-    if !HEADLESS {
+    if !*HEADLESS.get().unwrap() {
         element.scroll_into_view();
         sleep(Duration::from_millis(500));
     }
@@ -187,11 +208,11 @@ fn get_answers() -> Vec<String> {
         }
 
         if collects.len() != collect_cnt + 1 {
-            println!("\n-- Answer is not found! --\nPlease search in the browser and choise an answear from the following numbers one to four.\nA browser with keywords searched from the question title will open...\n\n[Title]: {}", &uoq.0);
+            println!("\n【Answer is not found!】 \nPlease search in the browser and choise an answear from the following numbers one to four.\nA browser with keywords searched from the question title will open...\n\n[Title]: {}", &uoq.0);
             webbrowser::open(&Url::GoogleSearch(&uoq.0).to_string());
 
             loop {
-                println!("Please select and enter a number from the following.\nex). 1\n   1. ア\n   2. イ\n   3. ウ\n   4. エ");
+                println!("-- Please select and enter a number from the following. --\nex). 1\n   1. ア\n   2. イ\n   3. ウ\n   4. エ");
 
                 let input: String = read!("{}\n");
                 let num = input.trim().parse::<i32>().unwrap_or(0);
