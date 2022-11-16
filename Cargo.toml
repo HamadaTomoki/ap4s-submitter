@@ -13,5 +13,6 @@ failure = "0.1.8"
 webbrowser = "0.8.2"
 once_cell = "1.16.0"
 text_io = "0.1.12"
+url = "2.3.1"
 
 # openssl = { version = "0.10", features = ["vendored"] }
