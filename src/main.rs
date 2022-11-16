@@ -194,7 +194,6 @@ fn get_answers() -> Vec<String> {
                     .find_element_by_xpath(&siken_dot_com::Question::Answer.to_string())
                     .unwrap(),
             );
-            // println!("{}\n{}", rm_symbol(&ans), rm_symbol(&uoq.0)); // ans diff
             if rm_symbol(&ans) == rm_symbol(&uoq.0) {
                 let collect = get_node_value(
                     &siken_tab
@@ -212,7 +211,7 @@ fn get_answers() -> Vec<String> {
             webbrowser::open(&Url::GoogleSearch(&uoq.0).to_string());
 
             loop {
-                println!("-- Please select and enter a number from the following. --\nex). 1\n   1. ア\n   2. イ\n   3. ウ\n   4. エ");
+                println!("-- Please select and type a number from the following. --\nex). 1\n   1. ア\n   2. イ\n   3. ウ\n   4. エ");
 
                 let input: String = read!("{}\n");
                 let num = input.trim().parse::<i32>().unwrap_or(0);
