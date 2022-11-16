@@ -50,7 +50,7 @@ fn main() {
     // Google form url
     println!("\n-- Pleaase type a form url here ↓ --");
     print!("    Form URL: ");
-    let form_url: String = read!("{}\n"); // test_url https://docs.google.com/forms/d/e/1FAIpQLScRkNwFH-sXyyPK-pYyP8pfCpXo5-I1JyNzB0wo1F_9RXUoJQ/viewform
+    let form_url: String = read!("{}\n");
 
     // setup headless chrome
     let option = LaunchOptions {
@@ -217,19 +217,19 @@ fn get_answers() -> Vec<String> {
                 let num = input.trim().parse::<i32>().unwrap_or(0);
                 match num {
                     1 => {
-                        click_element(google_form::Answers::A(i).to_string());
+                        collects.push(Answers::A.to_string());
                         break;
                     }
                     2 => {
-                        click_element(google_form::Answers::I(i).to_string());
+                        collects.push(Answers::I.to_string());
                         break;
                     }
                     3 => {
-                        click_element(google_form::Answers::U(i).to_string());
+                        collects.push(Answers::U.to_string());
                         break;
                     }
                     4 => {
-                        click_element(google_form::Answers::E(i).to_string());
+                        collects.push(Answers::E.to_string());
                         break;
                     }
                     _ => {
