@@ -1,4 +1,3 @@
-use std::process::exit;
 use std::thread::sleep;
 use std::time::{self, Duration};
 use std::{
@@ -81,7 +80,7 @@ fn main() {
     submit();
 
     println!("...Done");
-    exit(1);
+    TAB.get().unwrap().close(true);
 }
 
 #[allow(unused_must_use)]
