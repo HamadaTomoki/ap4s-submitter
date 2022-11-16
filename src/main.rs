@@ -157,7 +157,7 @@ fn click_element(xpath: String) {
     let element = TAB.get().unwrap().find_element_by_xpath(&xpath).unwrap();
     if !*HEADLESS.get().unwrap() {
         element.scroll_into_view();
-        sleep(Duration::from_millis(500));
+        sleep(Duration::from_millis(100));
     }
     element.click();
 }
