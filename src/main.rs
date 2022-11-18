@@ -5,37 +5,46 @@ use std::{
     sync::Arc,
 };
 
-use headless_chrome::LaunchOptions;
-use headless_chrome::{Browser, Element};
+use headless_chrome::{Browser, Element, LaunchOptions};
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use text_io::read;
 use urlencoding::encode;
-
 use xpath::{google_form, siken_dot_com};
 
-static HEADLESS: OnceCell<bool> = OnceCell::new();
-static TAB: OnceCell<Arc<headless_chrome::Tab>> = OnceCell::new();
+pub static HEADLESS: OnceCell<bool> = OnceCell::new();
+pub static TAB: OnceCell<Browser> = OnceCell::new();
 
 #[allow(unused_must_use)]
 fn main() {
     // Crowling mode
-    print!("\nDo you use the 'Headless Mode'? [Y/n] ");
-    let input: String = read!();
-    let option = input.trim().to_uppercase();
-    let mut headless = false;
-    match &*option {
-        "Y" => {
-            headless = true;
-        }
-        "N" => {
-            headless = false;
-        }
-        _ => {
-            println!("Pleaase type 'Y' or 'n' here again.\n You've typed an option that is not in the options.");
+    let mut headless = None;
+    while headless.is_none() {
+        print!("\nDo you use the 'Headless Mode'? [Y/n] ");
+        let input: String = read!();
+        let option = input.trim().to_uppercase();
+        match &*option {
+            "Y" => {
+                headless = Some(true);
+            }
+            "N" => {
+                headless = Some(false);
+            }
+            _ => {
+                println!("\n-- Pleaase type 'Y' or 'n' here again. --\nYou should type an option that is not in the options.");
+            }
         }
     }
-    HEADLESS.set(headless);
+    HEADLESS.set(headless.unwrap());
+
+    // setup headless chrome
+    let option = LaunchOptions {
+        headless: *HEADLESS.get().unwrap(),
+        idle_browser_timeout: time::Duration::from_secs(200),
+        ..Default::default()
+    };
+    let browser = Browser::new(option).unwrap();
+    TAB.set(browser);
 
     // Student infomation
     println!("\n-- Please type your student information. --");
@@ -45,46 +54,59 @@ fn main() {
     let id: String = read!("{}\n");
     print!("    Your Name: ");
     let name: String = read!("{}\n");
+    let student = Student { class_id, id, name };
 
     // Google form url
-    println!("\n-- Pleaase type a form url here ↓ --");
-    print!("    Form URL: ");
-    let form_url: String = read!("{}\n");
+    let mut has_error = true;
+    while has_error {
+        println!("\n-- Pleaase type a form url here ↓ --");
+        print!("    Form URL: ");
+        let input: String = read!("{}\n");
+        if url::Url::parse(&input).is_ok() {
+            has_error = crowl(&input, &student).is_err();
+            if has_error {
+                println!("\n【Url is not Valid !】\nYou should type url collectly.");
+            } else {
+            }
+        } else {
+            println!("\n【Url is not Valid !】\nYou should type url collectly.");
+        }
+    }
 
-    // setup headless chrome
-    let option = LaunchOptions {
-        headless: *HEADLESS.get().unwrap(),
-        idle_browser_timeout: time::Duration::from_secs(200),
-        ..Default::default()
-    };
-    let browser = Browser::new(option).unwrap();
-    TAB.set(browser.wait_for_initial_tab().unwrap());
+    println!("...Done");
+    TAB.get()
+        .unwrap()
+        .wait_for_initial_tab()
+        .unwrap()
+        .close_with_unload();
+}
 
+#[allow(unused_must_use)]
+fn crowl(form_url: &str, student: &Student) -> anyhow::Result<()> {
     println!("\nNow crawling...");
 
+    let tab = &TAB.get().unwrap().wait_for_initial_tab()?;
+
     // navigate to the google form website.
-    TAB.get().unwrap().navigate_to(&form_url);
-    TAB.get().unwrap().wait_until_navigated();
+    tab.navigate_to(form_url);
+    tab.wait_until_navigated();
 
     // type the student infomation.
-    type_student_info(&Student { class_id, id, name });
+    type_student_info(student)?;
 
     // type the collects.
-    let answers = type_answers();
+    let answers = type_answers()?;
     println!("-- Result --");
     for (i, ans) in (0_i32..).zip(answers.iter()) {
         println!("{}. {}", i + 1, ans,);
     }
 
     // submit
-    submit();
-
-    println!("...Done");
-    TAB.get().unwrap().close(true);
+    submit()?;
+    anyhow::Ok(())
 }
 
-#[allow(unused_must_use)]
-fn submit() {
+fn submit() -> anyhow::Result<()> {
     if *HEADLESS.get().unwrap() {
         loop {
             print!("\nDo you want to submit? [Y/n] ");
@@ -92,7 +114,7 @@ fn submit() {
             let option = input.trim().to_uppercase();
             match &*option {
                 "Y" => {
-                    click_element(google_form::SUBMIT.to_owned());
+                    click_element(google_form::SUBMIT.to_owned())?;
                     println!("\nSubmited answears!");
                     break;
                 }
@@ -101,7 +123,7 @@ fn submit() {
                     break;
                 }
                 _ => {
-                    println!("Pleaase type 'Y' or 'n' here again.\n You've typed an option that is not in the options.");
+                    println!("Pleaase type 'Y' or 'n' here again.\nYou shourld type an option that is not in the options.");
                 }
             }
         }
@@ -110,56 +132,59 @@ fn submit() {
         println!("\nAfter submiting, enter and quite.");
         let _: String = read!("{}\n");
     }
+    anyhow::Ok(())
 }
 
 #[allow(unused_must_use)]
-fn type_student_info(student: &Student) {
-    let type_an_student_info = |stu_info: &str, stu_xpath: String| {
-        TAB.get()
-            .unwrap()
-            .find_element_by_xpath(&stu_xpath)
-            .unwrap()
-            .type_into(stu_info);
+fn type_student_info(student: &Student) -> anyhow::Result<()> {
+    let type_an_student_info = |stu_info: &str, stu_xpath: String| -> anyhow::Result<()> {
+        let tab = &TAB.get().unwrap().wait_for_initial_tab()?;
+        let element = tab.find_element_by_xpath(&stu_xpath)?;
+        element.type_into(stu_info);
+        anyhow::Ok(())
     };
-    type_an_student_info(&student.class_id, google_form::Student::ClassId.to_string());
-    type_an_student_info(&student.id, google_form::Student::Id.to_string());
-    type_an_student_info(&student.name, google_form::Student::Name.to_string());
+    type_an_student_info(&student.class_id, google_form::Student::ClassId.to_string())?;
+    type_an_student_info(&student.id, google_form::Student::Id.to_string())?;
+    type_an_student_info(&student.name, google_form::Student::Name.to_string())?;
+    anyhow::Ok(())
 }
 
 #[allow(unused_must_use)]
-fn type_answers() -> Vec<String> {
+fn type_answers() -> anyhow::Result<Vec<String>> {
     let answers = get_answers();
     for (i, ans) in (0_i32..).zip(answers.iter()) {
         match ans.to_owned() {
             ans if ans == Answers::A.to_string() => {
-                click_element(google_form::Answers::A(i).to_string());
+                click_element(google_form::Answers::A(i).to_string())?;
             }
 
             ans if ans == Answers::I.to_string() => {
-                click_element(google_form::Answers::I(i).to_string());
+                click_element(google_form::Answers::I(i).to_string())?;
             }
 
             ans if ans == Answers::U.to_string() => {
-                click_element(google_form::Answers::U(i).to_string());
+                click_element(google_form::Answers::U(i).to_string())?;
             }
 
             ans if ans == Answers::E.to_string() => {
-                click_element(google_form::Answers::E(i).to_string());
+                click_element(google_form::Answers::E(i).to_string())?;
             }
             _ => {}
         }
     }
-    answers
+    anyhow::Ok(answers)
 }
 
 #[allow(unused_must_use)]
-fn click_element(xpath: String) {
-    let element = TAB.get().unwrap().find_element_by_xpath(&xpath).unwrap();
+fn click_element(xpath: String) -> anyhow::Result<()> {
+    let tab = &TAB.get().unwrap().wait_for_initial_tab()?;
+    let element = tab.find_element_by_xpath(&xpath)?;
     if !*HEADLESS.get().unwrap() {
         element.scroll_into_view();
         sleep(Duration::from_millis(100));
     }
     element.click();
+    anyhow::Ok(())
 }
 
 #[allow(unused_must_use)]
@@ -206,7 +231,7 @@ fn get_answers() -> Vec<String> {
         }
 
         if collects.len() != collect_cnt + 1 {
-            println!("\n【Answer is not found!】 \nPlease search in the browser and choise an answear from the following numbers one to four.\nA browser with keywords searched from the question title will open...\n\n[Title]: {}", &uoq.0);
+            println!("\n【Answer is not found !】 \n-- Please search in the browser and choise an answear from the following numbers one to four. --\nA browser with keywords searched from the question title will open...\n\n[Title]: {}", &uoq.0);
             webbrowser::open(&Url::GoogleSearch(&uoq.0).to_string());
 
             loop {
@@ -232,7 +257,7 @@ fn get_answers() -> Vec<String> {
                         break;
                     }
                     _ => {
-                        println!("Please type '1' to '4' here again.\n You've typed an answer that is not in the options.");
+                        println!("-- Please type '1' to '4' here again. --\nYou should type an answer that is not in the options.");
                     }
                 }
             }
@@ -268,13 +293,9 @@ fn find_website_links(url: &str, search_tab: &Arc<headless_chrome::Tab>) -> Vec<
 
 #[allow(unused_must_use)]
 fn get_questions() -> Vec<String> {
-    TAB.get()
-        .unwrap()
-        .find_elements_by_xpath(google_form::QUESTIONS)
-        .unwrap()
-        .iter()
-        .map(get_node_value)
-        .collect()
+    let tab = TAB.get().unwrap().wait_for_initial_tab().unwrap();
+    let element = tab.find_elements_by_xpath(google_form::QUESTIONS).unwrap();
+    element.iter().map(get_node_value).collect()
 }
 
 fn get_node_value(el: &Element) -> String {
@@ -387,7 +408,7 @@ struct Student {
     class_id: String,
 }
 
-pub enum Url<'a> {
+enum Url<'a> {
     GoogleSearch(&'a str),
 }
 
