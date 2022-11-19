@@ -10,24 +10,24 @@ use text_io::read;
 #[allow(unused_must_use)]
 fn main() {
     // Crowling mode
-    let mut headless = None;
-    while headless.is_none() {
+    let mut option = None;
+    while option.is_none() {
         print!("\nDo you use the 'Headless Mode'? [Y/n] ");
-        let input: String = read!();
-        let option = input.trim().to_uppercase();
-        match &*option {
+        let mut input: String = read!();
+        input = input.trim().to_uppercase();
+        match &*input {
             "Y" => {
-                headless = Some(true);
+                option = Some(true);
             }
             "N" => {
-                headless = Some(false);
+                option = Some(false);
             }
             _ => {
                 println!("\n-- Pleaase type 'Y' or 'n' here again. --\nYou should type an option that is not in the options.");
             }
         }
     }
-    let headless = headless.unwrap();
+    let headless = option.unwrap();
 
     // setup headless chrome
     let option = LaunchOptions {

@@ -51,12 +51,11 @@ impl Crowling {
         if self.headless {
             loop {
                 print!("\nDo you want to submit? [Y/n] ");
-                let input: String = read!("{}\n");
-                let option = input.trim().to_uppercase();
-                match &*option {
+                let mut input: String = read!("{}\n");
+                input = input.trim().to_uppercase();
+                match &*input {
                     "Y" => {
                         self.click_element(google_form::SUBMIT.to_owned())?;
-                        println!("\nSubmited answears!");
                         break;
                     }
                     "N" => {
@@ -73,7 +72,7 @@ impl Crowling {
             println!("\nAfter submiting, enter and quite.");
             let _: String = read!("{}\n");
         }
-        anyhow::Ok(())
+        Ok(())
     }
 
     fn type_student_info(&self, student: &Student) -> anyhow::Result<()> {
@@ -81,12 +80,12 @@ impl Crowling {
             let tab = self.browser.wait_for_initial_tab()?;
             let element = tab.find_element_by_xpath(&stu_xpath)?;
             element.type_into(stu_info);
-            anyhow::Ok(())
+            Ok(())
         };
         type_an_student_info(&student.class_id, google_form::Student::ClassId.to_string())?;
         type_an_student_info(&student.id, google_form::Student::Id.to_string())?;
         type_an_student_info(&student.name, google_form::Student::Name.to_string())?;
-        anyhow::Ok(())
+        Ok(())
     }
 
     fn type_answers(&self) -> anyhow::Result<Vec<String>> {
@@ -111,7 +110,7 @@ impl Crowling {
                 _ => {}
             }
         }
-        anyhow::Ok(answers)
+        Ok(answers)
     }
 
     fn click_element(&self, xpath: String) -> anyhow::Result<()> {
@@ -122,7 +121,7 @@ impl Crowling {
             sleep(Duration::from_millis(100));
         }
         element.click();
-        anyhow::Ok(())
+        Ok(())
     }
 
     fn get_answers(&self) -> Vec<String> {
@@ -183,8 +182,8 @@ impl Crowling {
                     println!("-- Please select and type a number from the following. --\nex). 1\n   1. ア\n   2. イ\n   3. ウ\n   4. エ");
 
                     let input: String = read!("{}\n");
-                    let num = input.trim().parse::<i32>().unwrap_or(0);
-                    match num {
+                    let input = input.trim().parse::<i32>().unwrap_or(0);
+                    match input {
                         1 => {
                             collects.push(Answers::A.to_string());
                             break;
@@ -241,10 +240,8 @@ impl Crowling {
             .to_owned()
     }
 
-    pub fn close(&self) {
-        self.browser
-            .wait_for_initial_tab()
-            .unwrap()
-            .close_with_unload();
+    pub fn close(&self) -> anyhow::Result<()> {
+        self.browser.wait_for_initial_tab()?.close_with_unload()?;
+        Ok(())
     }
 }
