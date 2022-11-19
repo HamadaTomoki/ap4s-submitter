@@ -9,34 +9,15 @@ use text_io::read;
 
 #[allow(unused_must_use)]
 fn main() {
-    // Crowling mode
-    let mut option = None;
-    while option.is_none() {
-        print!("\nDo you use the 'Headless Mode'? [Y/n] ");
-        let mut input: String = read!();
-        input = input.trim().to_uppercase();
-        match &*input {
-            "Y" => {
-                option = Some(true);
-            }
-            "N" => {
-                option = Some(false);
-            }
-            _ => {
-                println!("\n-- Pleaase type 'Y' or 'n' here again. --\nYou should type an option that is not in the options.");
-            }
-        }
-    }
-    let headless = option.unwrap();
-
     // setup headless chrome
     let option = LaunchOptions {
-        headless,
+        headless: false,
+        window_size: Some((1920, 1080)),
         idle_browser_timeout: time::Duration::from_secs(200),
         ..Default::default()
     };
     let browser = Browser::new(option).unwrap();
-    let crowling = Crowling::new(headless, browser);
+    let crowling = Crowling::new(browser);
 
     // Student infomation
     println!("\n-- Please type your student information. --");

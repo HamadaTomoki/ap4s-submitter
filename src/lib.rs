@@ -13,14 +13,13 @@ use text_io::read;
 use urlencoding::encode;
 
 pub struct Crowling {
-    headless: bool,
     browser: Browser,
 }
 
 #[allow(unused_must_use)]
 impl Crowling {
-    pub fn new(headless: bool, browser: Browser) -> Self {
-        Crowling { headless, browser }
+    pub fn new(browser: Browser) -> Self {
+        Crowling { browser }
     }
 
     pub fn crowl(&self, form_url: &str, student: &Student) -> anyhow::Result<()> {
@@ -32,46 +31,26 @@ impl Crowling {
         tab.navigate_to(form_url);
         tab.wait_until_navigated();
 
-        // type the student infomation.
+        // type the student infomatiまりはこon.
         self.type_student_info(student)?;
 
         // type the collects.
         let answers = self.type_answers()?;
-        println!("-- Result --");
+        println!("\n-- Result --");
         for (i, ans) in (0_i32..).zip(answers.iter()) {
             println!("{}. {}", i + 1, ans,);
         }
 
         // submit
-        self.submit()?;
+        println!("\n-- Please go to Google form and press the execute button! --");
+        println!("\nAfter submiting, enter and quite.");
+        let _: String = read!("{}\n");
+
         Ok(())
     }
 
-    fn submit(&self) -> anyhow::Result<()> {
-        if self.headless {
-            loop {
-                print!("\nDo you want to submit? [Y/n] ");
-                let mut input: String = read!("{}\n");
-                input = input.trim().to_uppercase();
-                match &*input {
-                    "Y" => {
-                        self.click_element(google_form::SUBMIT.to_owned())?;
-                        break;
-                    }
-                    "N" => {
-                        println!("\nDid'nt submit answers.");
-                        break;
-                    }
-                    _ => {
-                        println!("Pleaase type 'Y' or 'n' here again.\nYou shourld type an option that is not in the options.");
-                    }
-                }
-            }
-        } else {
-            println!("\n-- Please go to Google form and press the execute button! --");
-            println!("\nAfter submiting, enter and quite.");
-            let _: String = read!("{}\n");
-        }
+    pub fn close(&self) -> anyhow::Result<()> {
+        self.browser.wait_for_initial_tab()?.close_with_unload()?;
         Ok(())
     }
 
@@ -116,10 +95,8 @@ impl Crowling {
     fn click_element(&self, xpath: String) -> anyhow::Result<()> {
         let tab = self.browser.wait_for_initial_tab()?;
         let element = tab.find_element_by_xpath(&xpath)?;
-        if !self.headless {
-            element.scroll_into_view();
-            sleep(Duration::from_millis(100));
-        }
+        element.scroll_into_view();
+        sleep(Duration::from_millis(100));
         element.click();
         Ok(())
     }
@@ -176,7 +153,7 @@ impl Crowling {
 
             if collects.len() != collect_cnt + 1 {
                 println!("\n【Answer is not found !】 \n-- Please search in the browser and choise an answear from the following numbers one to four. --\nA browser with keywords searched from the question title will open...\n\n[Title]: {}", &uoq.0);
-                webbrowser::open(&enums::Url::GoogleSearch(&uoq.0).to_string());
+                // webbrowser::open(&enums::Url::GoogleSearch(&uoq.0).to_string());
 
                 loop {
                     println!("-- Please select and type a number from the following. --\nex). 1\n   1. ア\n   2. イ\n   3. ウ\n   4. エ");
@@ -238,10 +215,5 @@ impl Crowling {
         el.get_description().unwrap().children.unwrap()[0]
             .node_value
             .to_owned()
-    }
-
-    pub fn close(&self) -> anyhow::Result<()> {
-        self.browser.wait_for_initial_tab()?.close_with_unload()?;
-        Ok(())
     }
 }

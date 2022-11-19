@@ -4,9 +4,6 @@ use std::fmt;
 pub const QUESTIONS: &str = r#"//*[@class="M7eMe"]/span"#;
 
 #[allow(dead_code)]
-pub const SUBMIT: &str = r#"//*[@id="mG61Hd"]/div[2]/div/div[3]/div[1]/div[1]/div"#;
-
-#[allow(dead_code)]
 pub enum Student {
     Id,
     Name,
