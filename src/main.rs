@@ -1,8 +1,7 @@
 mod enums;
 
-use std::time;
-
 use ap4s::{model::Student, Crowling};
+use std::time;
 
 use headless_chrome::{Browser, LaunchOptions};
 use text_io::read;

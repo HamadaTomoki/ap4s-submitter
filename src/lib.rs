@@ -68,7 +68,7 @@ impl Crowling {
     }
 
     fn type_answers(&self) -> anyhow::Result<Vec<String>> {
-        let answers = self.get_answers();
+        let answers = self.get_answers()?;
         for (i, ans) in (0_i32..).zip(answers.iter()) {
             match ans.to_owned() {
                 ans if ans == Answers::A.to_string() => {
@@ -101,14 +101,14 @@ impl Crowling {
         Ok(())
     }
 
-    fn get_answers(&self) -> Vec<String> {
+    fn get_answers(&self) -> anyhow::Result<Vec<String>> {
         let rm_symbol = |ans: &str| -> String {
             let mut answer = ans.to_owned();
             answer.retain(|c| !r#"()ーも有用はて、，,？?。・ .;:"#.contains(c));
             answer
         };
-        let browser = Browser::default().unwrap();
-        let search_tab = browser.wait_for_initial_tab().unwrap();
+        let browser = Browser::default()?;
+        let search_tab = browser.wait_for_initial_tab()?;
 
         let questions = self.get_questions();
         let urls_of_question = questions
@@ -119,14 +119,17 @@ impl Crowling {
                     self.find_website_links(
                         &enums::Url::GoogleSearch(&encode(ans)).to_string(),
                         &search_tab,
-                    ),
+                    )
+                    .unwrap(),
                 )
             })
             .collect::<Vec<(String, Vec<String>)>>();
+        search_tab.close_with_unload();
 
         let mut collects = Vec::new();
-        let browser = Browser::default().unwrap();
-        let siken_tab = browser.wait_for_initial_tab().unwrap();
+
+        let browser = Browser::default()?;
+        let siken_tab = browser.wait_for_initial_tab()?;
 
         'top: for (i, uoq) in (0_i32..).zip(urls_of_question.iter()) {
             let collect_cnt = collects.len();
@@ -136,15 +139,13 @@ impl Crowling {
 
                 let ans = self.get_node_value(
                     &siken_tab
-                        .find_element_by_xpath(&siken_dot_com::Question::Answer.to_string())
-                        .unwrap(),
+                        .find_element_by_xpath(&siken_dot_com::Question::Answer.to_string())?,
                 );
                 if rm_symbol(&ans) == rm_symbol(&uoq.0) {
-                    let collect = self.get_node_value(
-                        &siken_tab
-                            .find_element_by_xpath(&siken_dot_com::Question::Collect.to_string())
-                            .unwrap(),
-                    );
+                    let collect = self
+                        .get_node_value(&siken_tab.find_element_by_xpath(
+                            &siken_dot_com::Question::Collect.to_string(),
+                        )?);
                     println!("{}. {}: {}", i + 1, ans, collect);
                     collects.push(collect);
                     continue 'top;
@@ -184,15 +185,20 @@ impl Crowling {
                 }
             }
         }
-        collects
+        siken_tab.close_with_unload();
+        Ok(collects)
     }
 
-    fn find_website_links(&self, url: &str, search_tab: &Arc<headless_chrome::Tab>) -> Vec<String> {
+    fn find_website_links(
+        &self,
+        url: &str,
+        search_tab: &Arc<headless_chrome::Tab>,
+    ) -> anyhow::Result<Vec<String>> {
         search_tab.navigate_to(url);
         search_tab.wait_until_navigated();
 
-        let rx = Regex::new(r#"^https?://(|www)\...-siken\.com.*$"#).unwrap();
-        let els = search_tab.find_elements("a").unwrap();
+        let rx = Regex::new(r#"^https?://(|www)\...-siken\.com.*$"#)?;
+        let els = search_tab.find_elements("a")?;
         let attrs = els.iter().map(|x| x.get_attributes().unwrap().unwrap());
         let mut urls = vec![];
         attrs.for_each(|url| {
@@ -202,7 +208,7 @@ impl Crowling {
                 }
             })
         });
-        urls
+        Ok(urls)
     }
 
     fn get_questions(&self) -> Vec<String> {
