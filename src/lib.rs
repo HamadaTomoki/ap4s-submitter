@@ -154,7 +154,7 @@ impl Crowling {
 
             if collects.len() != collect_cnt + 1 {
                 println!("\n【Answer is not found !】 \n-- Please search in the browser and choise an answear from the following numbers one to four. --\nA browser with keywords searched from the question title will open...\n\n[Title]: {}", &uoq.0);
-                // webbrowser::open(&enums::Url::GoogleSearch(&uoq.0).to_string());
+                webbrowser::open(&enums::Url::GoogleSearch(&uoq.0).to_string());
 
                 loop {
                     println!("-- Please select and type a number from the following. --\nex). 1\n   1. ア\n   2. イ\n   3. ウ\n   4. エ");

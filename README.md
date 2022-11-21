@@ -20,4 +20,10 @@ AP4Sの応用午前フォームの提出を半自動化します。
 8. フォームで送信ボタンを押す
 9. ターミナルでEnterを押してプログラムを終了
 
+## Test URL
+
+```
+https://docs.google.com/forms/d/e/1FAIpQLScRkNwFH-sXyyPK-pYyP8pfCpXo5-I1JyNzB0wo1F_9RXUoJQ/viewform
+```
+
 
