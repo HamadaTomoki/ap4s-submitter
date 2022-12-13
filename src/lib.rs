@@ -6,6 +6,7 @@ use std::{thread::sleep, time::Duration};
 
 use enums::xpath::{google_form, siken_dot_com};
 use enums::Answers;
+use headless_chrome::types::RemoteError;
 use headless_chrome::{Browser, Element};
 use model::Student;
 use regex::Regex;
@@ -16,7 +17,6 @@ pub struct Crowling {
     browser: Browser,
 }
 
-#[allow(unused_must_use)]
 impl Crowling {
     pub fn new(browser: Browser) -> Self {
         Crowling { browser }
@@ -95,9 +95,9 @@ impl Crowling {
     fn click_element(&self, xpath: String) -> anyhow::Result<()> {
         let tab = self.browser.wait_for_initial_tab()?;
         let element = tab.find_element_by_xpath(&xpath)?;
-        element.scroll_into_view();
+        element.scroll_into_view().unwrap();
         sleep(Duration::from_millis(100));
-        element.click();
+        element.click().unwrap();
         Ok(())
     }
 
@@ -124,7 +124,7 @@ impl Crowling {
                 )
             })
             .collect::<Vec<(String, Vec<String>)>>();
-        search_tab.close_with_unload();
+        search_tab.close_with_unload()?;
 
         let mut collects = Vec::new();
 
@@ -134,8 +134,8 @@ impl Crowling {
         'top: for (i, uoq) in (0_i32..).zip(urls_of_question.iter()) {
             let collect_cnt = collects.len();
             for url in uoq.1.iter() {
-                siken_tab.navigate_to(url);
-                siken_tab.wait_until_navigated();
+                siken_tab.navigate_to(url)?;
+                siken_tab.wait_until_navigated()?;
 
                 let ans = self.get_node_value(
                     &siken_tab
@@ -154,7 +154,7 @@ impl Crowling {
 
             if collects.len() != collect_cnt + 1 {
                 println!("\n【Answer is not found !】 \n-- Please search in the browser and choise an answear from the following numbers one to four. --\nA browser with keywords searched from the question title will open...\n\n[Title]: {}", &uoq.0);
-                webbrowser::open(&enums::Url::GoogleSearch(&uoq.0).to_string());
+                webbrowser::open(&enums::Url::GoogleSearch(&uoq.0).to_string())?;
 
                 loop {
                     println!("-- Please select and type a number from the following. --\nex). 1\n   1. ア\n   2. イ\n   3. ウ\n   4. エ");
@@ -185,7 +185,7 @@ impl Crowling {
                 }
             }
         }
-        siken_tab.close_with_unload();
+        siken_tab.close_with_unload()?;
         Ok(collects)
     }
 
@@ -194,8 +194,8 @@ impl Crowling {
         url: &str,
         search_tab: &Arc<headless_chrome::Tab>,
     ) -> anyhow::Result<Vec<String>> {
-        search_tab.navigate_to(url);
-        search_tab.wait_until_navigated();
+        search_tab.navigate_to(url)?;
+        search_tab.wait_until_navigated()?;
 
         let rx = Regex::new(r#"^https?://(|www)\...-siken\.com.*$"#)?;
         let els = search_tab.find_elements("a")?;
@@ -213,8 +213,22 @@ impl Crowling {
 
     fn get_questions(&self) -> Vec<String> {
         let tab = self.browser.wait_for_initial_tab().unwrap();
-        let element = tab.find_elements_by_xpath(google_form::QUESTIONS).unwrap();
-        element.iter().map(|el| self.get_node_value(el)).collect()
+        let mut questions = Vec::new();
+        let mut id = 14;
+        loop {
+            let question =
+                tab.find_element_by_xpath(&google_form::Questions::Title(id).to_string());
+            match question {
+                Ok(el) => {
+                    questions.push(self.get_node_value(&el));
+                }
+                Err(_) => {
+                    break;
+                }
+            }
+            id += 16;
+        }
+        questions
     }
 
     fn get_node_value(&self, el: &Element) -> String {

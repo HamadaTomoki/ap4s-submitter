@@ -1,9 +1,40 @@
 use std::fmt;
 
-#[allow(dead_code)]
-pub const QUESTIONS: &str = r#"//*[@class="M7eMe"]/span"#;
+// "//*[@id="mG61Hd"]/div[2]/div/div[2]/div[1]/div/div/div[2]/div/div[1]/div/div[1]/input"
+// "//*[@id="mG61Hd"]/div[2]/div/div[2]/div[2]/div/div/div[2]/div/div[1]/div/div[1]/input"
+//
+// "//*[@id="i14"]"
+// "//*[@id="i17"]/div[3]/div"
+// "//*[@id="i20"]/div[3]/div"
+// "//*[@id="i23"]/div[3]/div"
+// "//*[@id="i26"]/div[3]/div"
+//
+// "//*[@id="i30"]"
+// "//*[@id="i33"]/div[3]/div"
+// "//*[@id="i36"]/div[3]/div"
+// "//*[@id="i39"]/div[3]/div"
+// "//*[@id="i42"]/div[3]/div"
+//
+// "//*[@id="i46"]"
+// "//*[@id="i62"]"
 
-#[allow(dead_code)]
+// "//*[@id="i14"]/span"
+// //*[@id="i30"]/span
+pub enum Questions {
+    Title(i32),
+}
+impl fmt::Display for Questions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            r#"//*[@id="i{}"]/span"#,
+            match *self {
+                Self::Title(i) => i,
+            }
+        )
+    }
+}
+
 pub enum Student {
     Id,
     Name,
@@ -23,7 +54,6 @@ impl fmt::Display for Student {
     }
 }
 
-#[allow(dead_code)]
 pub enum Answers {
     A(i32),
     I(i32),

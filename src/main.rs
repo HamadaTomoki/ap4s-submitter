@@ -6,7 +6,6 @@ use std::time;
 use headless_chrome::{Browser, LaunchOptions};
 use text_io::read;
 
-#[allow(unused_must_use)]
 fn main() {
     // setup headless chrome
     let option = LaunchOptions {
@@ -38,8 +37,6 @@ fn main() {
             has_error = crowling.crowl(&input, &student).is_err();
             if has_error {
                 println!("\n【Url is not Valid !】\nYou should type url collectly.");
-            } else {
-                crowling.close();
             }
         } else {
             println!("\n【Url is not Valid !】\nYou should type url collectly.");
@@ -47,5 +44,7 @@ fn main() {
     }
 
     println!("...Done");
-    crowling.close();
+    if let Err(e) = crowling.close() {
+        println!("Error: {:?}", e);
+    }
 }
